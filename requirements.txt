@@ -3,9 +3,20 @@ uvicorn
 pydantic
 torch
 transformers
+sentence-transformers
 sympy
 numpy
 gdown
 requests
 sentencepiece
 scikit-learn
+timm
+safetensors
+python-multipart
+pillow
+python-docx
+pdfplumber
+onnxruntime
+huggingface-hub
+easyocr
+# pytesseract

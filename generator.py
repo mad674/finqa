@@ -561,6 +561,98 @@ def train(model, dataloader, vocab_dict, epochs=5, lr=1e-5,ptr_weight = 0.5, pat
 
 
 
+# def infer(model, sample, vocab_dict, max_len=50):
+#     model.eval()
+#     inv_vocab = {v: k for k, v in vocab_dict.items()}
+
+#     input_ids = sample["input_ids"].unsqueeze(0).to(device)
+#     input_mask = sample["input_mask"].unsqueeze(0).to(device)
+#     input_tokens = [sample["input_tokens"]]
+
+#     outputs, hidden = [], None
+#     memory, step_idx = {}, 0
+#     curr_tokens = []
+
+#     try:
+#         sos_id = int(vocab_dict["<SOS>"])
+#         eof_id = int(vocab_dict["<EOF>"])
+#         dec_input = torch.full((1, 1), sos_id, dtype=torch.long).to(device)
+#         print("✅ '<SOS>' token ID:", sos_id)
+#         print("✅ '<EOF>' token ID:", eof_id)
+#     except Exception as e:
+#         print("❌ Decoder init error:", e)
+#         return []
+
+
+#     step_type = 0  # 0: op, 1: (, 2: arg1, 3: ,, 4: arg2, 5: ), 6: <EOF>
+#     with torch.no_grad():
+#         enc_out = model.encoder(input_ids=input_ids, attention_mask=input_mask).last_hidden_state
+
+#         for step in range(max_len):
+#             vocab_logits, attn_weights, hidden = model.decoder(
+#                 dec_input, enc_out, hidden, input_tokens, input_mask
+#             )
+#             logits = vocab_logits[0, 0]  # shape: [vocab_size]
+
+#             pred_token_id = logits.argmax(-1).item()
+#             pred_token = inv_vocab.get(pred_token_id, "<UNK>")
+#             print(f"\n📘 Step {step+1} — Predicted: {pred_token}")
+
+#             if pred_token == "<EOF>":
+#                 print("🛑 <EOF> reached")
+#                 break
+
+#             elif pred_token == "<COPY>":
+#                 attn = attn_weights.squeeze(0).squeeze(0)
+#                 pointer_idx = attn.argmax().item()
+
+#                 print("📈 Top-5 Attention Scores for Numeric Tokens:")
+#                 numeric_scores = [(clean_token(input_tokens[0][i]), attn[i].item())
+#                                   for i in range(len(attn))
+#                                   if is_number(clean_token(input_tokens[0][i]))]
+#                 for tok, score in sorted(numeric_scores, key=lambda x: -x[1])[:5]:
+#                     print(f"{tok:>10} | {score:.4f}")
+
+#                 if 0 <= pointer_idx < len(input_tokens[0]):
+#                     copied_raw = input_tokens[0][pointer_idx]
+#                     try:
+#                         reconstructed = reconstruct_number_from_tokens(input_tokens[0], pointer_idx)
+#                     except:
+#                         reconstructed = None
+#                     curr_tokens.append(reconstructed if reconstructed else clean_token(copied_raw))
+#                 else:
+#                     curr_tokens.append("<UNK>")
+
+#             else:
+#                 if(pred_token!="<SOS>"):
+#                     # Auto-fill memory references
+#                     if step_type in {2, 4} and pred_token.startswith("#"):
+#                         curr_tokens.append(f"#{step_idx - 1}" if step_idx > 0 else pred_token)
+#                     else:
+#                         curr_tokens.append(pred_token)
+
+#             if pred_token == ")":
+#                 step_line = " ".join(curr_tokens)
+#                 outputs.append(step_line)
+#                 memory[step_idx] = step_line
+#                 step_idx += 1
+#                 curr_tokens = []
+#                 if step_idx >= 1:
+#                     curr_tokens.append(",")
+
+#             dec_input = torch.tensor([[pred_token_id]], dtype=torch.long).to(device)
+#             step_type = (step_type + 1) % 7
+#             if step_type == 6:
+#               if tok != "<EOF>":
+#                   continue
+#               if step_idx < 1:  # ⛔ safeguard
+#                   continue
+
+
+#     return outputs or [" ".join(curr_tokens)]
+
+
+
 def infer(model, sample, vocab_dict, max_len=50):
     model.eval()
     inv_vocab = {v: k for k, v in vocab_dict.items()}
@@ -574,17 +666,15 @@ def infer(model, sample, vocab_dict, max_len=50):
     curr_tokens = []
 
     try:
-        sos_id = int(vocab_dict["<SOS>"])
-        eof_id = int(vocab_dict["<EOF>"])
-        dec_input = torch.full((1, 1), sos_id, dtype=torch.long).to(device)
-        print("✅ '<SOS>' token ID:", sos_id)
-        print("✅ '<EOF>' token ID:", eof_id)
+        sos_id = vocab_dict["<SOS>"]
+        eof_id = vocab_dict["<EOF>"]
+        dec_input = torch.tensor([[sos_id]], device=device)
+        print("✅ Initialized with <SOS>")
     except Exception as e:
-        print("❌ Decoder init error:", e)
+        print("❌ Error initializing decoder input:", e)
         return []
 
-
-    step_type = 0  # 0: op, 1: (, 2: arg1, 3: ,, 4: arg2, 5: ), 6: <EOF>
+    step_type = 0
     with torch.no_grad():
         enc_out = model.encoder(input_ids=input_ids, attention_mask=input_mask).last_hidden_state
 
@@ -592,11 +682,11 @@ def infer(model, sample, vocab_dict, max_len=50):
             vocab_logits, attn_weights, hidden = model.decoder(
                 dec_input, enc_out, hidden, input_tokens, input_mask
             )
-            logits = vocab_logits[0, 0]  # shape: [vocab_size]
+            logits = vocab_logits[0, 0]
 
             pred_token_id = logits.argmax(-1).item()
             pred_token = inv_vocab.get(pred_token_id, "<UNK>")
-            print(f"\n📘 Step {step+1} — Predicted: {pred_token}")
+            print(f"\n📘 Step {step + 1} — Predicted: {pred_token}")
 
             if pred_token == "<EOF>":
                 print("🛑 <EOF> reached")
@@ -606,7 +696,7 @@ def infer(model, sample, vocab_dict, max_len=50):
                 attn = attn_weights.squeeze(0).squeeze(0)
                 pointer_idx = attn.argmax().item()
 
-                print("📈 Top-5 Attention Scores for Numeric Tokens:")
+                print("📈 Top-5 Numeric Attention Scores:")
                 numeric_scores = [(clean_token(input_tokens[0][i]), attn[i].item())
                                   for i in range(len(attn))
                                   if is_number(clean_token(input_tokens[0][i]))]
@@ -624,9 +714,8 @@ def infer(model, sample, vocab_dict, max_len=50):
                     curr_tokens.append("<UNK>")
 
             else:
-                if(pred_token!="<SOS>"):
-                    # Auto-fill memory references
-                    if step_type in {2, 4} and pred_token.startswith("#"):
+                if pred_token != "<SOS>":
+                    if step_type in {2, 4}:
                         curr_tokens.append(f"#{step_idx - 1}" if step_idx > 0 else pred_token)
                     else:
                         curr_tokens.append(pred_token)
@@ -637,16 +726,19 @@ def infer(model, sample, vocab_dict, max_len=50):
                 memory[step_idx] = step_line
                 step_idx += 1
                 curr_tokens = []
-                if step_idx >= 1:
+                if step_idx > 1:
                     curr_tokens.append(",")
 
-            dec_input = torch.tensor([[pred_token_id]], dtype=torch.long).to(device)
+            # Update decoder input
+            dec_input = torch.tensor([[pred_token_id]], device=device)
             step_type = (step_type + 1) % 7
-            if step_type == 6:
-              if tok != "<EOF>":
-                  continue
-              if step_idx < 1:  # ⛔ safeguard
-                  continue
 
+            # EOF safe guard (updated)
+            if step_type == 6 and pred_token == "<EOF>":
+                break
 
-    return outputs or [" ".join(curr_tokens)]
+        # Save final tokens if any
+        if curr_tokens and "".join(curr_tokens).strip():
+            outputs.append(" ".join(curr_tokens))
+
+    return outputs or ["<NO_OUTPUT>"]

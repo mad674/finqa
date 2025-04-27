@@ -14,7 +14,7 @@ Ensure you have the following installed:
 Follow these steps to set up and run the project:
 
 ### 1. Clone the Repository
-```bash
+
 git clone https://github.com/mad674/finqa.git
 cd finqa
 

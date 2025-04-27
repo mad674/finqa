@@ -11,48 +11,48 @@ def split_into_sentences(text):
 
 
 def merge_blocks(blocks, question):
-    # Deduplicate and split sentences for pretext and posttext
-    pretext = deduplicate_sentences(
-        sum([split_into_sentences(" ".join(b["pretext"]) if isinstance(b["pretext"], list) else b["pretext"]) for b in blocks], [])
-    )
-    posttext = deduplicate_sentences(
-        sum([split_into_sentences(" ".join(b["posttext"]) if isinstance(b["posttext"], list) else b["posttext"]) for b in blocks], [])
-    )
-    table = sum([b["table"] for b in blocks], [])  # Keep table as a list
+    """
+    Merges sentences from blocks into pretext, posttext, and table.
+    Each block is expected to have "pretext", "posttext", and "table" keys.
+    """
+    try:
+        # Deduplicate and split sentences for pretext
+        pretext = deduplicate_sentences(
+            sum([
+                split_into_sentences(
+                    " ".join(b["pretext"]) if isinstance(b, dict) and isinstance(b.get("pretext"), list)
+                    else (b["pretext"] if isinstance(b, dict) and isinstance(b.get("pretext"), str) else "")
+                )
+                for b in blocks
+            ], [])
+        )
 
-    return {
-        "question": question,
-        "pretext": pretext,  # List of sentences
-        "table": table,
-        "posttext": posttext  # List of sentences
-    }
-    # Deduplicate and split sentences for pretext and posttext
-    pretext = deduplicate_sentences(
-        sum([split_into_sentences(b["pretext"]) for b in blocks], [])  # Apply sentence splitting directly
-    )
-    posttext = deduplicate_sentences(
-        sum([split_into_sentences(b["posttext"]) for b in blocks], [])  # Apply sentence splitting directly
-    )
-    table = sum([b["table"] for b in blocks], [])  # Keep table as a list
+        # Deduplicate and split sentences for posttext
+        posttext = deduplicate_sentences(
+            sum([
+                split_into_sentences(
+                    " ".join(b["posttext"]) if isinstance(b, dict) and isinstance(b.get("posttext"), list)
+                    else (b["posttext"] if isinstance(b, dict) and isinstance(b.get("posttext"), str) else "")
+                )
+                for b in blocks
+            ], [])
+        )
 
-    return {
-        "question": question,
-        "pretext": pretext,  # List of sentences
-        "table": table,
-        "posttext": posttext  # List of sentences
-    }
-    # Deduplicate and split sentences for pretext and posttext
-    pretext = deduplicate_sentences(
-        sum([split_into_sentences(" ".join(b["pretext"])) for b in blocks], [])
-    )
-    posttext = deduplicate_sentences(
-        sum([split_into_sentences(" ".join(b["posttext"])) for b in blocks], [])
-    )
-    table = sum([b["table"] for b in blocks], [])  # Keep table as a list
+        # Combine tables
+        table = sum([b["table"] for b in blocks if isinstance(b, dict) and "table" in b], [])
 
-    return {
-        "question": question,
-        "pretext": pretext,  # List of sentences
-        "table": table,
-        "posttext": posttext  # List of sentences
-    }
+        return {
+            "question": question,
+            "pretext": pretext,  # List of sentences
+            "table": table,      # List of table rows
+            "posttext": posttext  # List of sentences
+        }
+
+    except Exception as e:
+        print(f"Error in merge_blocks: {e}")
+        return {
+            "question": question,
+            "pretext": [],
+            "table": [],
+            "posttext": []
+        }

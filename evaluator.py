@@ -126,7 +126,7 @@ def evaluate_program(prog, table_csv=None):
             toks.extend(tokenize_dsl_line(s))
     try:
         result = eval_program(toks, table=table_csv)
-        print(result)
+        print("result:",result)
     except Exception as e:
         print("Error:", e)
         result = "Error evaluating program"
