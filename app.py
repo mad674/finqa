@@ -136,7 +136,6 @@ generator_model.load_state_dict(torch.load(generator_path, map_location=device))
 generator_model.eval()
 
 
-
 #check health
 @app.get("/health")
 async def health_check():
@@ -182,7 +181,6 @@ async def ask_pdf(question: str = Form(...),pdf: UploadFile = File(...)):
 
         # Step 2: Convert the PDF to JSON
         model_input = convert_pdf_to_json(pdf_path, question)
-
         print("model_input: ", model_input)
         # Step 3: Parse the JSON to extract fields for run_pipeline
         model_input_data = json.loads(model_input)
@@ -223,7 +221,7 @@ async def run_pipeline(data: QueryIn):
     }
     # record=data
     # Step 2: Use retriever to get gold_inds
-    gold_inds_raw = generate_predicted_gold_inds(record, retriever_model, bert_tokenizer,threshold=0,num_candidates=3)
+    gold_inds_raw = generate_predicted_gold_inds(record, retriever_model, bert_tokenizer,threshold=0,num_candidates=2)
     # print("gold_inds_raw: ", gold_inds_raw)
     gold_inds = {k: v["sentence"] for k, v in gold_inds_raw}
     # return {"gold_inds": gold_inds}
