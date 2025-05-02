@@ -205,7 +205,6 @@ def download_and_load_models():
     # Ensure directories exist
     os.makedirs("models", exist_ok=True)
     os.makedirs("data", exist_ok=True)
-
     # Download all required files
     for model_name, model_info in model_files.items():
         download_model(model_info["file_id"], model_info["output_path"])

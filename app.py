@@ -145,6 +145,7 @@ async def health_check():
 async def root():
     return {"message": "fin_gpt server is running"} 
 
+
 #input is only question
 @app.post("/question")
 async def find_relevant(request: Request):
@@ -171,6 +172,7 @@ async def find_relevant(request: Request):
         return {"error": "No question provided"}, 400
 
 #input is question and pdf file
+
 @app.post("/ask_pdf", response_model=GenerateOut)
 async def ask_pdf(question: str = Form(...),pdf: UploadFile = File(...)):
     # Step 1: Save the uploaded PDF to a temporary file
@@ -242,6 +244,7 @@ async def run_pipeline(data: QueryIn):
     gold_inds=list(gold_inds.values())
     # Step 5: Return all
     return GenerateOut(gold_inds=gold_inds, program=program, result=str(result))
+
 
 
 @app.post("/predict")
